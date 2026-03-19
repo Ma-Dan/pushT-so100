@@ -118,6 +118,8 @@ _joystick_state = {
     'axis_0': 0.0,  # Y velocity (forward/backward)
     'axis_1': 0.0,  # X velocity (left/right)
     'axis_3': 0.0,  # Yaw velocity (rotation)
+    'button_x': False,  # X button: reset environment
+    'button_b': False,  # B button: toggle recording
 }
 _joystick_lock = threading.Lock()
 
@@ -127,6 +129,8 @@ class JoystickData(BaseModel):
     axis_0: float = 0.0
     axis_1: float = 0.0
     axis_3: float = 0.0
+    button_x: bool = False  # X button: reset environment
+    button_b: bool = False  # B button: toggle recording
 
 
 fastapi_app = FastAPI(title="Joystick Server")
@@ -141,9 +145,12 @@ async def receive_joystick(data: JoystickData):
         _joystick_state['axis_0'] = data.axis_0
         _joystick_state['axis_1'] = data.axis_1
         _joystick_state['axis_3'] = data.axis_3
+        _joystick_state['button_x'] = data.button_x
+        _joystick_state['button_b'] = data.button_b
 
     logger.info(f"[Joystick] Received: axis_0={data.axis_0:.3f}, "
-               f"axis_1={data.axis_1:.3f}, axis_3={data.axis_3:.3f}")
+               f"axis_1={data.axis_1:.3f}, axis_3={data.axis_3:.3f}, "
+               f"button_x={data.button_x}, button_b={data.button_b}")
 
     return {"status": "ok"}
 
@@ -550,11 +557,27 @@ def joystick_control():
     """
     global buttonCooldown
 
+    now = time.time()
+
     # Get latest joystick state from HTTP
     with _joystick_lock:
         axis_0 = _joystick_state['axis_0']  # Y velocity (forward/backward)
         axis_1 = _joystick_state['axis_1']  # X velocity (left/right)
         axis_3 = _joystick_state['axis_3']  # Yaw velocity (rotation)
+        button_x = _joystick_state['button_x']  # X button: reset environment
+        button_b = _joystick_state['button_b']  # B button: toggle recording
+
+    # X button (button 3): reset environment
+    if button_x and (now - buttonCooldown > COOLDOWN_SEC):
+        buttonCooldown = now
+        logger.info("[Button] X button pressed - resetting environment")
+        reset_env()
+
+    # B button (button 1): toggle recording
+    if button_b and (now - buttonCooldown > COOLDOWN_SEC):
+        buttonCooldown = now
+        logger.info("[Button] B button pressed - toggling recording")
+        record_toggle()
 
     # Position control
     dx = (abs(axis_1) > DEADZONE) * axis_1 * MOVE_SPEED * model.opt.timestep
