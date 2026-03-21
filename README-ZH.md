@@ -88,6 +88,36 @@ lerobot-dataset-viz --repo-id <你的数据路径> --episode-index 12
 ![PushT Task Demo1](assets/show1.gif)
 ![PushT Task Demo2](assets/show2.gif)
 
+### 6. ACT 模型训练与推理
+
+除了 Diffusion Policy，本项目还支持使用 **ACT (Action Chunking with Transformers)** 模型进行训练。ACT 是一种基于 Transformer 的策略架构，通过预测动作序列（action chunking）来实现高效的模仿学习。
+
+#### 6.1 ACT 模型训练
+
+使用以下命令训练 ACT 模型：
+
+```bash
+python src/train_act.py --data-path /Users/lerobot/.cache/huggingface/lerobot/qian1dqs/so100-pusht --output-dir outputs/pusht_act_1 --training-steps 1000 --device mps
+```
+
+**主要参数说明：**
+- `--data-path`: 数据集路径
+- `--output-dir`: 模型输出目录
+- `--training-steps`: 训练步数
+- `--device`: 计算设备（cuda/mps/cpu/auto）
+- `--chunk-size`: 动作预测序列长度（默认 16）
+- `--n-action-steps`: 实际执行的动作步数（默认 8）
+
+#### 6.2 ACT 模型推理
+
+训练完成后，使用以下命令进行交互式推理：
+
+```bash
+mjpython src/interactive_gym_act.py --policy outputs/pusht_act_1/checkpoints_2026-03-21_17:06/final_model --dataset /Users/lerobot/.cache/huggingface/lerobot/qian1dqs/so100-pusht
+```
+
+> **注意**：macOS 用户必须使用 `mjpython` 而非普通 `python`，以确保 MuJoCo viewer 正确运行。
+
 ---
 
 ## 🔧 常见问题排查
