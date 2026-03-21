@@ -97,16 +97,24 @@ lerobot-dataset-viz --repo-id <你的数据路径> --episode-index 12
 使用以下命令训练 ACT 模型：
 
 ```bash
-python src/train_act.py --data-path /Users/lerobot/.cache/huggingface/lerobot/qian1dqs/so100-pusht --output-dir outputs/pusht_act_1 --training-steps 1000 --device mps
+python src/train_act.py --data-path /Users/dan/.cache/huggingface/lerobot/qian1dqs/so100-pusht --output-dir outputs/pusht_act_1 --training-steps 50000 --device mps
 ```
 
 **主要参数说明：**
 - `--data-path`: 数据集路径
 - `--output-dir`: 模型输出目录
-- `--training-steps`: 训练步数
+- `--training-steps`: 训练步数（推荐 50000+）
 - `--device`: 计算设备（cuda/mps/cpu/auto）
-- `--chunk-size`: 动作预测序列长度（默认 16）
-- `--n-action-steps`: 实际执行的动作步数（默认 8）
+- `--chunk-size`: 动作预测序列长度（默认 30，越大动作越平滑）
+- `--n-action-steps`: 每次推理执行的动作步数（默认 10）
+- `--kl-weight`: KL 散度权重（默认 5.0，较低值可减少抖动）
+- `--temporal-ensemble-coeff`: 时序集成系数（可选，如 0.01 可平滑动作）
+
+> **减少动作抖动的建议**：
+> 1. 增大 `chunk_size`（如 30-100）以学习更平滑的动作序列
+> 2. 降低 `kl_weight`（如 5.0）以减少 VAE 不稳定性
+> 3. 增加训练步数（至少 50000 步）
+> 4. 可选：启用 `--temporal-ensemble-coeff 0.01` 进行时序平滑
 
 #### 6.2 ACT 模型推理
 

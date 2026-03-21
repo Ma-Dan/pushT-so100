@@ -29,30 +29,35 @@ def parse_args():
     )
 
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size")
-    parser.add_argument("--training-steps", type=int, default=20000, help="Total training steps")
-    parser.add_argument("--warmup-steps", type=int, default=500, help="Warmup steps")
+    parser.add_argument("--training-steps", type=int, default=50000, help="Total training steps")
+    parser.add_argument("--warmup-steps", type=int, default=2000, help="Warmup steps")
     parser.add_argument("--log-freq", type=int, default=100, help="Logging frequency")
-    parser.add_argument("--save-freq", type=int, default=2000, help="Checkpoint save frequency")
+    parser.add_argument("--save-freq", type=int, default=5000, help="Checkpoint save frequency")
 
     parser.add_argument("--lr", type=float, default=1e-5, help="Learning rate")
     parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay")
     parser.add_argument("--num-workers", type=int, default=4, help="Dataloader workers")
 
     parser.add_argument("--n-obs-steps", type=int, default=1, help="Number of observation steps (must be 1 for ACT)")
-    parser.add_argument("--chunk-size", type=int, default=16, help="Action chunk size / prediction horizon")
-    parser.add_argument("--n-action-steps", type=int, default=8, help="Number of action steps to execute")
+    # chunk_size: 增大以学习更平滑的动作序列，原始 ACT 论文使用 100
+    parser.add_argument("--chunk-size", type=int, default=30, help="Action chunk size / prediction horizon (larger = smoother actions)")
+    # n_action_steps: 每次推理执行的动作步数，应小于 chunk_size
+    parser.add_argument("--n-action-steps", type=int, default=10, help="Number of action steps to execute per inference")
     parser.add_argument("--vision-backbone", type=str, default="resnet18", help="Vision backbone")
 
     # ACT specific arguments
     parser.add_argument("--n-encoder-layers", type=int, default=4, help="Number of encoder layers")
-    parser.add_argument("--n-decoder-layers", type=int, default=1, help="Number of decoder layers")
+    parser.add_argument("--n-decoder-layers", type=int, default=7, help="Number of decoder layers (7 as in original ACT)")
     parser.add_argument("--n-heads", type=int, default=8, help="Number of attention heads")
     parser.add_argument("--dim-feedforward", type=int, default=3200, help="Feedforward dimension")
     parser.add_argument("--dim-model", type=int, default=512, help="Model dimension")
     parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
     parser.add_argument("--latent-dim", type=int, default=32, help="VAE latent dimension")
     parser.add_argument("--n-vae-encoder-layers", type=int, default=4, help="Number of VAE encoder layers")
-    parser.add_argument("--kl-weight", type=float, default=10.0, help="KL divergence weight")
+    # kl_weight: 降低以减少 VAE 对动作抖动的影响
+    parser.add_argument("--kl-weight", type=float, default=5.0, help="KL divergence weight (lower = more stable actions)")
+    # temporal_ensemble_coeff: 启用时序集成来平滑动作输出
+    parser.add_argument("--temporal-ensemble-coeff", type=float, default=None, help="Temporal ensemble coefficient for smoothing actions (e.g., 0.01)")
 
     parser.add_argument(
         "--device",
@@ -155,8 +160,20 @@ def main():
         latent_dim=args.latent_dim,
         n_vae_encoder_layers=args.n_vae_encoder_layers,
         kl_weight=args.kl_weight,
+        temporal_ensemble_coeff=args.temporal_ensemble_coeff,
         device=str(device),  # Set device in config so preprocessor uses correct device
     )
+
+    # 打印关键训练参数
+    print("=" * 60)
+    print("ACT Training Configuration:")
+    print(f"  chunk_size: {args.chunk_size}")
+    print(f"  n_action_steps: {args.n_action_steps}")
+    print(f"  kl_weight: {args.kl_weight}")
+    print(f"  temporal_ensemble_coeff: {args.temporal_ensemble_coeff}")
+    print(f"  training_steps: {args.training_steps}")
+    print(f"  lr: {args.lr}")
+    print("=" * 60)
 
     # Build delta_timestamps for dataset
     # ACT's observation_delta_indices returns None, so we use [0] for current observation
