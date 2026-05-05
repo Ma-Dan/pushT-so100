@@ -153,6 +153,10 @@ class SmolVLAPolicyWrapper:
         self.device = device
         self.image_keys = image_keys or ["observation.images.cam_top", "observation.images.cam_side"]
 
+        # Get default task string from dataset metadata (task_index 0)
+        tasks_df = dataset_metadata.tasks
+        self.default_task = list(tasks_df.index)[0] if len(tasks_df) > 0 else ""
+
         # 导入 build_inference_frame
         from lerobot.policies.utils import build_inference_frame
         self.build_inference_frame = build_inference_frame
@@ -173,6 +177,7 @@ class SmolVLAPolicyWrapper:
                 observation=observation,
                 ds_features=self.dataset_metadata.features,
                 device=self.device,
+                task=self.default_task,
             )
 
             # 预处理
